@@ -43,8 +43,7 @@ pipeline {
         stage('Testing') {
             steps {
                 echo "Running tests (placeholder)"
-                // Contoh jika ingin menjalankan PHPUnit / Pest:
-                // sh "cd ${APP_DIR} && php artisan test"
+                
             }
         }
 
@@ -55,13 +54,32 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
                             mkdir -p ${DEPLOY_DIR}/database
                             cd ${DEPLOY_DIR}
-                            git pull origin main || git clone git@github.com:daranovia/quiz.git .
+
+                            # Jika folder git sudah ada, pull. Jika tidak, clone
+                            if [ -d ".git" ]; then
+                                git reset --hard
+                                git clean -fd
+                                git pull origin main
+                            else
+                                git clone git@github.com:daranovia/quiz.git .
+                            fi
+
+                            # Install composer
                             composer install --no-dev --optimize-autoloader
+
+                            # Setup database sqlite
                             touch database/database.sqlite
                             chmod 664 database/database.sqlite
+
+                            # Migrate dan seed
                             php artisan migrate --force
                             php artisan db:seed --force
+
+                            # Clear semua cache Laravel
                             php artisan cache:clear
+                            php artisan view:clear
+                            php artisan config:clear
+                            php artisan route:clear
                         '
                     """
                 }
@@ -71,10 +89,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline selesai dengan sukses"
+            echo "Pipeline selesai dengan sukses "
         }
         failure {
-            echo "Pipeline gagal"
+            echo "Pipeline gagal "
         }
     }
 }
