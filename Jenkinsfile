@@ -43,7 +43,7 @@ pipeline {
         stage('Testing') {
             steps {
                 echo "Running tests (placeholder)"
-                
+
             }
         }
 
@@ -52,30 +52,12 @@ pipeline {
                 sshagent(['jenkins-ssh']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
-                            mkdir -p ${DEPLOY_DIR}/database
                             cd ${DEPLOY_DIR}
-
-                            # Jika folder git sudah ada, pull. Jika tidak, clone
-                            if [ -d ".git" ]; then
-                                git reset --hard
-                                git clean -fd
-                                git pull origin main
-                            else
-                                git clone git@github.com:daranovia/quiz.git .
-                            fi
-
-                            # Install composer
+                            git reset --hard
+                            git pull origin main
                             composer install --no-dev --optimize-autoloader
-
-                            # Setup database sqlite
-                            touch database/database.sqlite
-                            chmod 664 database/database.sqlite
-
-                            # Migrate dan seed
                             php artisan migrate --force
                             php artisan db:seed --force
-
-                            # Clear semua cache Laravel
                             php artisan cache:clear
                             php artisan view:clear
                             php artisan config:clear
