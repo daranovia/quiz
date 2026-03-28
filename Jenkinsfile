@@ -5,7 +5,7 @@ pipeline {
         COMPOSER_HOME = "${WORKSPACE}/.composer"
         DEPLOY_USER = "dara"
         DEPLOY_HOST = "192.168.0.108"
-        APP_DIR = "/home/dara/dev"
+        APP_DIR = "/var/www/dev"
         GIT_REPO = "git@github.com:daranovia/quiz.git"
         GIT_BRANCH = "main"
     }
