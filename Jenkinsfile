@@ -4,7 +4,7 @@ pipeline {
     environment {
         COMPOSER_HOME = "${WORKSPACE}/.composer"
         DEPLOY_USER = "dara"
-        DEPLOY_HOST = "192.168.0.108"                
+        DEPLOY_HOST = "192.168.0.108"
         APP_DIR = "/var/www/dev"
         GIT_REPO = "git@github.com:daranovia/quiz.git"
         GIT_BRANCH = "main"
@@ -14,7 +14,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                sshagent(['jenkins-ssh-key']) {
+                sshagent(['jenkins-ssh']) {
                     sh """
                         if [ ! -d src ]; then
                             git clone -b $GIT_BRANCH $GIT_REPO src
@@ -53,7 +53,7 @@ pipeline {
 
         stage('Deploy to Debian') {
             steps {
-                sshagent(['jenkins-ssh-key']) {
+                sshagent(['jenkins-ssh']) {
                     sh """
                         # Buat folder Laravel di server kalau belum ada
                         ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "mkdir -p $APP_DIR"
