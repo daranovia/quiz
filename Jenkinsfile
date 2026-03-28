@@ -2,43 +2,38 @@ pipeline {
     agent any
 
     environment {
-        COMPOSER_HOME = "${WORKSPACE}/.composer"
+        APP_DIR = "/var/jenkins_home/workspace/laravel-devops/src"
         DEPLOY_USER = "dara"
         DEPLOY_HOST = "192.168.0.108"
-        APP_DIR = "/var/www/dev"
-        GIT_REPO = "git@github.com:daranovia/quiz.git"
-        GIT_BRANCH = "main"
+        DEPLOY_DIR  = "/var/www/dev"
+        COMPOSER_HOME = "${WORKSPACE}/.composer"
     }
 
     stages {
-
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                sshagent(['jenkins-ssh']) {
-                    sh """
-                        if [ ! -d src ]; then
-                            git clone -b $GIT_BRANCH $GIT_REPO src
-                        else
-                            cd src
-                            git fetch origin
-                            git reset --hard origin/$GIT_BRANCH
-                        fi
-
-                        git config --global --add safe.directory ${WORKSPACE}
-                        git config --global --add safe.directory ${WORKSPACE}/src
-                    """
-                }
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'git@github.com:daranovia/quiz.git', 
+                        credentialsId: 'jenkins-ssh'
+                    ]]
+                ])
             }
         }
 
         stage('Build Composer') {
             steps {
                 script {
-                    docker.image('composer:2').inside('--entrypoint=""') {
+                    sh 'mkdir -p ${APP_DIR}'
+
+                    docker.image('composer:2').inside("-u 1000:1000 -v ${APP_DIR}:${APP_DIR}") {
                         sh """
-                            cd src
+                            cd ${APP_DIR}
                             composer install --no-dev --optimize-autoloader
-                            php artisan package:discover --ansi
                         """
                     }
                 }
@@ -47,7 +42,8 @@ pipeline {
 
         stage('Testing') {
             steps {
-                echo 'Testing stage'
+                echo "Running tests (placeholder)"
+
             }
         }
 
@@ -55,31 +51,26 @@ pipeline {
             steps {
                 sshagent(['jenkins-ssh']) {
                     sh """
-                        # Buat folder Laravel di server kalau belum ada
-                        ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "mkdir -p $APP_DIR"
-
-                        # Copy semua file Laravel ke server
-                        scp -o StrictHostKeyChecking=no -r ${WORKSPACE}/src/* $DEPLOY_USER@$DEPLOY_HOST:$APP_DIR/
-
-                        # Jalankan composer & migrate di server
-                        ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST '
-                            cd $APP_DIR
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "
+                            mkdir -p ${DEPLOY_DIR}
+                            cd ${DEPLOY_DIR}
+                            git pull origin main || git clone git@github.com:daranovia/quiz.git .
                             composer install --no-dev --optimize-autoloader
                             php artisan migrate --force
-                        '
+                            php artisan cache:clear
+                        "
                     """
                 }
             }
         }
-
     }
 
     post {
         success {
-            echo 'Laravel berhasil di-deploy ke server!'
+            echo "Pipeline selesai dengan sukses "
         }
         failure {
-            echo 'Deploy gagal. Cek console log di Jenkins.'
+            echo "Pipeline gagal "
         }
     }
 }
