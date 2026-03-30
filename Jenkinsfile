@@ -7,8 +7,6 @@ pipeline {
         DEPLOY_HOST = "10.17.37.137"
         DEPLOY_DIR  = "/var/www/dev"
         COMPOSER_HOME = "${WORKSPACE}/.composer"
-
-        // Pastikan Docker client pakai socket host, bukan tcp
         DOCKER_HOST = ""
     }
 
@@ -32,17 +30,17 @@ pipeline {
         stage('Build Composer') {
             steps {
                 script {
-                    sh "mkdir -p ${APP_DIR}"
+                    sh(script: "mkdir -p ${APP_DIR}")
 
-                    // Jalankan composer via Docker, pakai user Jenkins untuk akses volume
-                    sh """
+                    // Jalankan composer via Docker tanpa harus escape $
+                    sh(script: '''
                         docker run --rm -u $(id -u):$(id -g) \
                             -v ${APP_DIR}:/app \
                             -v ${COMPOSER_HOME}:/composer \
                             -w /app \
                             composer:2 \
                             composer install --no-dev --optimize-autoloader
-                    """
+                    ''')
                 }
             }
         }
@@ -50,13 +48,13 @@ pipeline {
         stage('Testing') {
             steps {
                 script {
-                    sh """
+                    sh(script: '''
                         docker run --rm -u $(id -u):$(id -g) \
                             -v ${APP_DIR}:/app \
                             -w /app \
                             php:8.2-cli \
                             bash -c "composer install --no-dev --optimize-autoloader && vendor/bin/phpunit"
-                    """
+                    ''')
                 }
             }
         }
@@ -64,7 +62,7 @@ pipeline {
         stage('Deploy to Debian') {
             steps {
                 sshagent(['jenkins-ssh']) {
-                    sh """
+                    sh(script: '''
                         ssh -o StrictHostKeyChecking=no -T ${DEPLOY_USER}@${DEPLOY_HOST} '
                             cd ${DEPLOY_DIR} || exit
                             git reset --hard
@@ -77,7 +75,7 @@ pipeline {
                             php artisan config:clear
                             php artisan route:clear
                         '
-                    """
+                    ''')
                 }
             }
         }
