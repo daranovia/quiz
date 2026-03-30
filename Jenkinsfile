@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_DIR = "/var/jenkins_home/workspace/laravel-devops/src"
         DEPLOY_USER = "dara"
-        DEPLOY_HOST = "192.168.0.108"
+        DEPLOY_HOST = "10.17.37.137"
         DEPLOY_DIR  = "/var/www/dev"
         COMPOSER_HOME = "${WORKSPACE}/.composer"
     }
