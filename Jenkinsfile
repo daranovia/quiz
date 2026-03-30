@@ -7,6 +7,9 @@ pipeline {
         DEPLOY_HOST = "10.17.37.137"
         DEPLOY_DIR  = "/var/www/dev"
         COMPOSER_HOME = "${WORKSPACE}/.composer"
+
+        // Pastikan Docker client pakai socket host, bukan tcp
+        DOCKER_HOST = ""
     }
 
     stages {
@@ -31,9 +34,9 @@ pipeline {
                 script {
                     sh "mkdir -p ${APP_DIR}"
 
-                    // Install dependencies via Docker Composer dengan cache
+                    // Jalankan composer via Docker, pakai user Jenkins untuk akses volume
                     sh """
-                        docker run --rm \
+                        docker run --rm -u $(id -u):$(id -g) \
                             -v ${APP_DIR}:/app \
                             -v ${COMPOSER_HOME}:/composer \
                             -w /app \
@@ -47,13 +50,12 @@ pipeline {
         stage('Testing') {
             steps {
                 script {
-                    // Jalankan unit test Laravel
                     sh """
-                        docker run --rm \
+                        docker run --rm -u $(id -u):$(id -g) \
                             -v ${APP_DIR}:/app \
                             -w /app \
                             php:8.2-cli \
-                            bash -c "composer install && vendor/bin/phpunit"
+                            bash -c "composer install --no-dev --optimize-autoloader && vendor/bin/phpunit"
                     """
                 }
             }
