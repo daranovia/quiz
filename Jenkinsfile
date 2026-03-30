@@ -31,11 +31,12 @@ pipeline {
                 script {
                     sh "mkdir -p ${APP_DIR}"
 
-                  
+                    // Install dependencies via Docker Composer dengan cache
                     sh """
                         docker run --rm \
-                            -v ${APP_DIR}:${APP_DIR} \
-                            -w ${APP_DIR} \
+                            -v ${APP_DIR}:/app \
+                            -v ${COMPOSER_HOME}:/composer \
+                            -w /app \
                             composer:2 \
                             composer install --no-dev --optimize-autoloader
                     """
@@ -45,7 +46,16 @@ pipeline {
 
         stage('Testing') {
             steps {
-                echo "Running tests (placeholder)"
+                script {
+                    // Jalankan unit test Laravel
+                    sh """
+                        docker run --rm \
+                            -v ${APP_DIR}:/app \
+                            -w /app \
+                            php:8.2-cli \
+                            bash -c "composer install && vendor/bin/phpunit"
+                    """
+                }
             }
         }
 
@@ -53,8 +63,8 @@ pipeline {
             steps {
                 sshagent(['jenkins-ssh']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
-                            cd ${DEPLOY_DIR}
+                        ssh -o StrictHostKeyChecking=no -T ${DEPLOY_USER}@${DEPLOY_HOST} '
+                            cd ${DEPLOY_DIR} || exit
                             git reset --hard
                             git pull origin main
                             composer install --no-dev --optimize-autoloader
