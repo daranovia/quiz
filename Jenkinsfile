@@ -2,12 +2,11 @@ pipeline {
     agent any
 
     environment {
-        APP_DIR = "/var/jenkins_home/workspace/laravel-devops/src"
-        DEPLOY_USER = "dara"
-        DEPLOY_HOST = "10.17.37.137"
-        DEPLOY_DIR  = "/var/www/dev"
+        APP_DIR      = "/var/jenkins_home/workspace/laravel-devops/src"
+        DEPLOY_USER  = "dara"
+        DEPLOY_HOST  = "10.17.37.137"
+        DEPLOY_DIR   = "/var/www/dev"
         COMPOSER_HOME = "${WORKSPACE}/.composer"
-        DOCKER_HOST = ""
     }
 
     stages {
@@ -30,17 +29,8 @@ pipeline {
         stage('Build Composer') {
             steps {
                 script {
-                    sh(script: "mkdir -p ${APP_DIR}")
-
-                    // Jalankan composer via Docker tanpa harus escape $
-                    sh(script: '''
-                        docker run --rm -u $(id -u):$(id -g) \
-                            -v ${APP_DIR}:/app \
-                            -v ${COMPOSER_HOME}:/composer \
-                            -w /app \
-                            composer:2 \
-                            composer install --no-dev --optimize-autoloader
-                    ''')
+                    sh "mkdir -p ${APP_DIR}"
+                    sh "composer install --no-dev --optimize-autoloader --working-dir=${APP_DIR}"
                 }
             }
         }
@@ -48,13 +38,7 @@ pipeline {
         stage('Testing') {
             steps {
                 script {
-                    sh(script: '''
-                        docker run --rm -u $(id -u):$(id -g) \
-                            -v ${APP_DIR}:/app \
-                            -w /app \
-                            php:8.2-cli \
-                            bash -c "composer install --no-dev --optimize-autoloader && vendor/bin/phpunit"
-                    ''')
+                    sh "cd ${APP_DIR} && vendor/bin/phpunit"
                 }
             }
         }
@@ -62,8 +46,8 @@ pipeline {
         stage('Deploy to Debian') {
             steps {
                 sshagent(['jenkins-ssh']) {
-                    sh(script: '''
-                        ssh -o StrictHostKeyChecking=no -T ${DEPLOY_USER}@${DEPLOY_HOST} '
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
                             cd ${DEPLOY_DIR} || exit
                             git reset --hard
                             git pull origin main
@@ -75,7 +59,7 @@ pipeline {
                             php artisan config:clear
                             php artisan route:clear
                         '
-                    ''')
+                    """
                 }
             }
         }
