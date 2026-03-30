@@ -10,6 +10,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout SCM') {
             steps {
                 checkout([
@@ -28,13 +29,15 @@ pipeline {
         stage('Build Composer') {
             steps {
                 script {
-                    sh 'mkdir -p ${APP_DIR}'
+                    sh "mkdir -p ${APP_DIR}"
 
-                    docker.image('composer:2').inside("-u 1000:1000 -v ${APP_DIR}:${APP_DIR}") {
-                        sh """
-                            cd ${APP_DIR}
-                            composer install --no-dev --optimize-autoloader
-                        """
+                    docker.withServer('unix:///var/run/docker.sock') {
+                        docker.image('composer:2').inside("-u 1000:1000 -v ${APP_DIR}:${APP_DIR}") {
+                            sh """
+                                cd ${APP_DIR}
+                                composer install --no-dev --optimize-autoloader
+                            """
+                        }
                     }
                 }
             }
@@ -43,7 +46,6 @@ pipeline {
         stage('Testing') {
             steps {
                 echo "Running tests (placeholder)"
-
             }
         }
 
@@ -71,10 +73,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline selesai dengan sukses "
+            echo "Pipeline selesai dengan sukses 🚀"
         }
         failure {
-            echo "Pipeline gagal "
+            echo "Pipeline gagal ❌"
         }
     }
 }
