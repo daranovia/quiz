@@ -1,0 +1,5 @@
+[development]
+10.17.37.137 ansible_user=dara
+
+[production]
+10.17.37.137 ansible_user=dara
