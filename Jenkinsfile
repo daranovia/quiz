@@ -31,14 +31,14 @@ pipeline {
                 script {
                     sh "mkdir -p ${APP_DIR}"
 
-                    docker.withServer('unix:///var/run/docker.sock') {
-                        docker.image('composer:2').inside("-u 1000:1000 -v ${APP_DIR}:${APP_DIR}") {
-                            sh """
-                                cd ${APP_DIR}
-                                composer install --no-dev --optimize-autoloader
-                            """
-                        }
-                    }
+                  
+                    sh """
+                        docker run --rm \
+                            -v ${APP_DIR}:${APP_DIR} \
+                            -w ${APP_DIR} \
+                            composer:2 \
+                            composer install --no-dev --optimize-autoloader
+                    """
                 }
             }
         }
